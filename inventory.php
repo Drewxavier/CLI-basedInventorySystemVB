@@ -140,6 +140,27 @@ class Inventory implements InventoryInterface
 		uasort($this->items, fn(Item $a, Item $b) => strcasecmp($a->getName(), $b->getName()));//this is like creating your own form of sorting, you can sort by any criteria you want by changing the logic inside the arrow function. In this case, we are sorting items alphabetically by their name in a case-insensitive manner using `strcasecmp()`.
 		return $this->items;
 	}
+	public function get(string $name): ?Item
+	{
+		$key = strtolower($name);
+		return $this->items[$key] ?? null;
+	}
+	public function decrease(string $name, int $qty): bool
+	{
+		$key = strtolower($name);
+		if (!isset($this->items[$key])) {
+			return false;
+		}
+		$current = $this->items[$key]->getQuantity();
+		$newQty = max(0, $current - $qty);
+		$this->items[$key]->setQuantity($newQty);
+
+		if ($newQty === 0) {
+			unset($this->items[$key]);
+		}
+		return true;
+
+	}
 }
 
 /**
@@ -196,12 +217,15 @@ function demo(): void
 function printHelp(): void
 {
 	echo "Available commands:\n";
-	echo "  add <name> <qty>     - add item or increase quantity\n";
-	echo "  update <name> <qty>  - set quantity\n";
-	echo "  remove <name>        - delete item\n";
-	echo "  list                 - show all items\n";
-	echo "  help                 - display this message\n";
-	echo "  exit                 - leave the program\n";
+	echo "  add <name> <qty>           - add item or increase quantity\n";
+	echo "  update <name> <qty>        - set quantity\n";
+	echo "  decrease <name> <qty>      - decrease quantity\n";
+	echo "  remove <name>              - delete item\n";
+	echo "  get <name> <action> [qty]  - show item quantity\n";
+	echo "          actions: view, update <qty>, decrease <qty>, remove\n";
+	echo "  list                       - show all items\n";
+	echo "  help                       - display this message\n";
+	echo "  exit                       - leave the program\n";
 }
 
 // instantiate inventory
@@ -282,6 +306,73 @@ while (true) {
 		case 'exit':
 			echo "Bye!\n";
 			exit(0);
+		case 'get':
+            if (count($parts) < 2) {
+				echo "Usage: get <name> <action> [qty]\n";
+				echo "Actions: view, update <qty>, decrease <qty>, remove\n";
+                break;
+		     }
+			 $name = $parts[0];
+			 $action = strtolower($parts[1]);
+			 $item = $inventory->get($name);
+			 
+			 if (!$item) {
+				echo "Item '{$name}' not found.\n";
+                break;
+		    }
+			switch ($action) {
+				case 'view':
+					echo $item->getName() . ": " . $item->getQuantity() . "\n";
+				break;
+
+                case 'update':
+				    if (count($parts) < 3 || !is_numeric($parts[2])) {
+						echo "Usage: get {$name} update <qty>\n";
+                break;
+                    }
+                    $qty = (int)$parts[2];
+                    $inventory->update($name, $qty);
+                    echo "Updated {$name} to {$qty}.\n";
+                    break;
+
+                case 'decrease':
+                    if (count($parts) < 3 || !is_numeric($parts[2])) {
+                        echo "Usage: get {$name} decrease <qty>\n";
+                        break;
+                    }
+                    $qty = (int)$parts[2];
+                    $inventory->decrease($name, $qty);
+                    echo "Decreased {$name} by {$qty}.\n";
+                    break;
+
+                case 'remove':
+                    $inventory->remove($name);
+                    echo "Removed {$name}.\n";
+                    break;
+
+                default:
+                    echo "Unknown action '{$action}'. Use view, update, decrease, or remove.\n";
+                break;
+    }
+    break;
+
+		case 'decrease':
+			if (count($parts) < 2) {
+				echo "Usage: decrease <name> <gty>\n";
+				break;
+			}
+			[$name, $qty] = $parts;
+			if (!is_numeric($qty) || (int)$qty < 0) {
+				echo "Quantity must be a non-negative number.\n";
+				break;
+			}
+			if ($inventory->decrease($name, (int)$qty)) {
+				echo "Decreased {$name} quantity by {$qty}.\n";
+			} else {
+				echo "Item '{$name}' not found.\n";
+			}
+			break;
+
 		case 'demo':
 			demo();
 			break;
