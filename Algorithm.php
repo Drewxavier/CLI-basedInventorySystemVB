@@ -104,7 +104,7 @@ function quickSort($array){
     $length = count($array);
 
     if ($length <= 2){
-        return $array;
+        return $array;//this is to return the array since it doesn't have enough values to perform quicksort
     } else {
         $pivot = $array[0];
         $left = $right = array();
